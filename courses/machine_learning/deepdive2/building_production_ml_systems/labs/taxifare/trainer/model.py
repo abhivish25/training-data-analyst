@@ -28,8 +28,6 @@ CSV_COLUMNS = [
 ]
 LABEL_COLUMN = 'fare_amount'
 DEFAULTS = [[0.0], ['na'], [0.0], [0.0], [0.0], [0.0], [0.0], ['na']]
-DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 
 def features_and_labels(row_data):
     for unwanted_col in ['key']:
@@ -59,36 +57,11 @@ def create_eval_dataset(pattern, batch_size):
     return dataset.prefetch(1)
 
 
-def parse_datetime(s):
-    if type(s) is not str:
-        s = s.numpy().decode('utf-8')
-    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S %Z")
-
-
 def euclidean(params):
     lon1, lat1, lon2, lat2 = params
     londiff = lon2 - lon1
     latdiff = lat2 - lat1
     return tf.sqrt(londiff*londiff + latdiff*latdiff)
-
-
-def get_dayofweek(s):
-    ts = parse_datetime(s)
-    return DAYS[ts.weekday()]
-
-
-@tf.function
-def dayofweek(ts_in):
-    return tf.map_fn(
-        lambda s: tf.py_function(get_dayofweek, inp=[s], Tout=tf.string),
-        ts_in
-    )
-
-
-@tf.function
-def fare_thresh(x):
-    return 60 * activations.relu(x)
-
 
 def transform(inputs, NUMERIC_COLS, STRING_COLS, nbuckets):
     # Pass-through columns
@@ -159,6 +132,7 @@ def rmse(y_true, y_pred):
 
 
 def build_dnn_model(nbuckets, nnsize, lr):
+    # input layer is all float except for pickup_datetime which is a string
     STRING_COLS = ['pickup_datetime']
     NUMERIC_COLS = (
             set(CSV_COLUMNS) - set([LABEL_COLUMN, 'key']) - set(STRING_COLS)
@@ -183,16 +157,18 @@ def build_dnn_model(nbuckets, nnsize, lr):
     output = layers.Dense(1, name='fare')(x)
 
     model = models.Model(inputs, output)
+    #TODO 1a
     lr_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
     model.compile(optimizer=lr_optimizer, loss='mse', metrics=[rmse, 'mse'])
-
+    
     return model
 
 
 def train_and_evaluate(hparams):
-    batch_size = hparams['batch_size']
-    nbuckets = hparams['nbuckets']
-    lr = hparams['lr']
+    #TODO 1b
+    batch_size = hparams['batch_size'] 
+    nbuckets = hparams['nbuckets'] 
+    lr = hparams['lr'] 
     nnsize = hparams['nnsize']
     eval_data_path = hparams['eval_data_path']
     num_evals = hparams['num_evals']
